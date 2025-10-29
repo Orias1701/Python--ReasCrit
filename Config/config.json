@@ -1,0 +1,33 @@
+{
+  "paths": {
+    "prompt_reason": "Prompt/EN-Reasoning.txt",
+    "prompt_critic": "Prompt/EN-Critical-Lite.txt",
+    "local_model_dir": "Models"
+  },
+  "models": {
+    "global_model": {
+      "model_name": "gemini-2.5-flash"
+    },
+    "local_model": {
+      "hf_repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
+      "hf_filename": "Phi-3-mini-4k-instruct-q4.gguf"
+    }
+  },
+  "dataset": {
+    "name": "SurAyush/News_Summary_Dataset",
+    "split": "train[:1000]"
+  },
+  "generation_params": {
+    "max_new_tokens": 512,
+    "temperature": 0.3,
+    "top_p": 0.9
+  },
+  "llama_cpp_params": {
+    "n_gpu_layers": -1,
+    "n_ctx": 4096
+  },
+  "flow_params": {
+    "max_iters": 3,
+    "min_improve": 0.05
+  }
+}

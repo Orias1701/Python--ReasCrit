@@ -64,7 +64,7 @@ Bước 5: Gán điểm từ 1 đến 5 dựa trên tính hữu ích. Trong đó
 •	4: Hữu ích rõ ràng, hỗ trợ truy vết tốt.
 •	5: Rất hữu ích, làm rõ hoàn toàn quá trình tóm tắt.
 
- 6. Tính nhất quán (Consistency)
+6. Tính nhất quán (Consistency)
 Hãy đánh giá mức độ nhất quán giữa phần Reasoning và phần Summary, đảm bảo phần Summary phản ánh đúng các ý chính được nêu trong Reasoning theo các bước sau:
 Bước 1: So sánh các ý chính trong phần Reasoning với phần Summary.
 Bước 2: Kiểm tra xem phần Summary có bao gồm đầy đủ các ý chính đã phân tích trong Reasoning không.
@@ -91,3 +91,5 @@ Bước 5: Gán điểm từ 1 đến 5 dựa trên mức độ nhất quán. Tr
 – Nêu rõ điểm mạnh, điểm yếu, ví dụ cụ thể nếu có.
 3.	Gợi ý chỉnh sửa:
 – Đề xuất cụ thể để cải thiện.
+
+[reasoning trace]:

@@ -15,4 +15,3 @@ Từ các ý đã chọn, viết một đoạn tóm tắt ngắn gọn, có đ�
 - Các ý loại bỏ: Liệt kê các ý loại bỏ.
 [Văn bản tóm tắt]: văn bản tóm tắt sinh ra ở bước 3.
 Văn bản gốc:
-{input_text}

@@ -1,0 +1,93 @@
+You are an expert tasked with evaluating the reasoning trace used to generate a summary from a source text. Carefully read the source document, the reasoning trace, and the generated summary. Assess the reasoning based on the six criteria below:
+1. Factuality
+•	Evaluate how accurately the reasoning reflects the information in the original document, using the following steps:
+•	Step 1: Read the entire reasoning trace and source document.
+Step 2: Compare each idea in the reasoning with the source to identify any misinformation, misinterpretation, or hallucination.
+Step 3: Highlight incorrect or unsupported content.
+Step 4: Provide detailed comments, with specific examples if available.
+Step 5: Assign a score from 1 to 5 based on factual accuracy:
+•	1: Contains many serious factual errors or completely misrepresents the source.
+•	2: Contains several factual errors that significantly affect interpretation.
+•	3: Minor factual issues, but the overall meaning aligns with the source.
+•	4: Almost entirely accurate, with only negligible mistakes.
+•	5: Fully accurate with no factual errors.
+
+2. Clarity
+•	Evaluate how clear and comprehensible the reasoning is:
+•	Step 1: Read the reasoning and assess the structure and language.
+Step 2: Identify ambiguous or unclear parts or where ideas are not clearly separated.
+Step 3: Check the organization and coherence between steps.
+Step 4: Provide detailed comments, with examples if needed.
+Step 5: Assign a score from 1 to 5 based on clarity:
+•	1: Incoherent and difficult to understand; lacks structure.
+•	2: Several unclear or under-explained segments.
+•	3: Generally clear, but contains confusing or ambiguous portions.
+•	4: Well-written with good flow; only minor issues.
+•	5: Very clear and easy to follow; excellent structure and expression.
+
+3. Logical Coherence
+•	Evaluate the logical progression and consistency across reasoning steps:
+•	Step 1: Analyze the sequence and logical relationships between reasoning steps.
+Step 2: Identify any missing connections or internal contradictions.
+Step 3: Assess the overall coherence and logical soundness.
+Step 4: Provide detailed observations with examples.
+Step 5: Assign a score from 1 to 5 based on logical coherence:
+•	1: No clear logical structure; steps are disconnected.
+•	2: Multiple logical gaps or inconsistencies.
+•	3: Somewhat coherent, but contains weak or unclear transitions.
+•	4: Mostly coherent; minor logical flaws.
+•	5: Fully coherent and logically structured throughout.
+
+4. Coverage
+•	Evaluate how well the reasoning captures the key points of the original document:
+•	Step 1: Identify the main ideas of the source document.
+Step 2: Check whether the reasoning includes all key information.
+Step 3: Note any important omissions or redundancy.
+Step 4: Provide specific comments or examples where applicable.
+Step 5: Assign a score from 1 to 5 based on coverage:
+•	1: Misses many critical ideas.
+•	2: Misses a significant portion of the core content.
+•	3: Omits a few important points.
+•	4: Covers almost all key points, with minor gaps.
+•	5: Thoroughly covers all essential information.
+
+5. Utility
+•	Evaluate how useful the reasoning is in helping understand how the summary was constructed:
+•	Step 1: Assess whether the reasoning explains why each point was kept or omitted.
+Step 2: Determine how well it supports traceability of the summarization process.
+Step 3: Provide clear comments and examples if available.
+Step 4: Indicate if the reasoning lacks any helpful function.
+Step 5: Assign a score from 1 to 5 based on utility:
+•	1: Provides no insight into the summarization process.
+•	2: Offers minimal support and lacks explanation.
+•	3: Partially helpful in understanding the reasoning.
+•	4: Clearly useful and aids traceability.
+•	5: Highly useful; offers full transparency of the summarization process.
+
+6. Consistency
+•	Evaluate how well the summary aligns with the reasoning trace. The summary should accurately reflect the ideas retained in the reasoning and not introduce unmentioned content.
+•	Step 1: Compare the key ideas in the reasoning with those in the summary.
+Step 2: Check whether the summary fully includes the points kept in the reasoning.
+Step 3: Verify that the summary does not introduce ideas that were not mentioned in the reasoning.
+Step 4: Provide detailed comments, citing examples if applicable.
+Step 5: Assign a score from 1 to 5 based on consistency:
+•	1: Completely inconsistent; the summary does not reflect the reasoning at all.
+•	2: Largely inconsistent; very few overlaps between summary and reasoning.
+•	3: Moderately consistent, but some key points are missing or extra ideas are introduced.
+•	4: Mostly consistent with minor issues.
+•	5: Fully consistent; the summary accurately and completely reflects the reasoning.
+
+Expected Output Format
+1. Scoring (JSON format):
+{
+  "factuality": <1–5>,
+  "clarity": <1–5>,
+  "logical_coherence": <1–5>,
+  "coverage": <1–5>,
+  "utility": <1–5>,
+  "consistency": <1–5>
+}
+2. General Comments:
+•	 Describe the strengths and weaknesses of the reasoning trace. Provide specific examples where possible.
+3. Suggestions for Improvement:
+•	 Provide concrete suggestions for revision. If none, write “None”.

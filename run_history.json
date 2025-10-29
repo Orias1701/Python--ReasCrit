@@ -1,0 +1,16 @@
+[
+  {
+    "round": 1,
+    "score": 4.833333333333333,
+    "reasoning": "**Reasoning trace:**\n\n- **Topic:** Inaugural international Booker Prize shortlist\n\n- **Key ideas:** Dame Muriel Spark, Doris Lessing, Ian McEwan, Margaret Atwood, and other international authors nominated for the new Booker Prize.\n\n- **Filtered ideas:** Details about past winners (Salman Rushdie, JM Coetzee, Kazuo Ishiguro), prize history, and nationality of authors (except for the ones mentioned).\nayer's nationality.\n\n**Summary:**\n\nDame Muriel Spark, along with Doris Lessing and Ian McEwan, are among the three British authors shortlisted for the inaugural international Booker Prize. The award, open to English-speaking authors and those widely translated, honors an author's body of work, with a prize of £60,000 awarded biennially in London.\n\n[**Summary**]: Dame Muriel Spark, Doris Lessing, and Ian McEwan are shortlisted for the inaugural international Booker Prize, which honors an author's body of work. The £60,000 biennial award is open to English-speaking authors and those widely translated.",
+    "evaluation": {
+      "factuality": 5,
+      "clarity": 5,
+      "logical_coherence": 5,
+      "coverage": 5,
+      "utility": 4,
+      "consistency": 5
+    },
+    "feedback": "The summary is factually accurate, clear, and coherent. It effectively covers the main points of the original text, including the authors shortlisted, the prize details, and the eligibility criteria. The reasoning trace is well-structured and provides a logical flow of information. The summary is consistent with the reasoning trace and offers a concise overview of the topic. To further improve the summary, consider adding a sentence about the inaugural nature of the prize and its purpose in response to criticisms of the Booker Prize's previous exclusivity."
+  }
+]
