@@ -1,14 +1,14 @@
 {
   "paths": {
     "prompt_reason": "Prompt/EN-Reasoning.txt",
-    "prompt_critic": "Prompt/EN-Critical-Lite.txt",
-    "local_model_dir": "Models"
+    "prompt_critic": "Prompt/EN-Critical-Lite.txt"
   },
   "models": {
-    "global_model": {
-      "model_name": "gemini-2.5-flash"
+    "reasoning_model": {
+      "hf_repo_id": "Qwen/Qwen1.5-1.8B-Chat-GGUF",
+      "hf_filename": "qwen1_5-1_8b-chat-q4_k_m.gguf"
     },
-    "local_model": {
+    "critical_model": {
       "hf_repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
       "hf_filename": "Phi-3-mini-4k-instruct-q4.gguf"
     }
@@ -24,7 +24,8 @@
   },
   "llama_cpp_params": {
     "n_gpu_layers": -1,
-    "n_ctx": 4096
+    "n_ctx": 4096,
+    "verbose": false
   },
   "flow_params": {
     "max_iters": 3,
