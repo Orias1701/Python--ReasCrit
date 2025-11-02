@@ -1,19 +1,26 @@
 {
   "paths": {
-    "prompt_reason": "Prompt/EN-Reasoning.txt",
-    "prompt_critic": "Prompt/EN-Critical-High.txt"
+    "prompt_reason": "Prompt/EN-Reason-First.txt",
+    "prompt_refine": "Prompt/EN-Reason-Refine.txt",
+    "prompt_critic": "Prompt/EN-Critical-High.txt",
+    "local_model_dir": "Models"
   },
   "models": {
     "reasoning_model": {
-      "hf_repo_id": "TheBloke/phi-2-GGUF",
-      "hf_filename": "phi-2.Q4_K_M.gguf"
+      "publisher": "microsoft",
+      "model_type": "phi3",
+      "hf_repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
+      "hf_filename": "Phi-3-mini-4k-instruct-q4.gguf"
     },
     "critical_model": {
+      "publisher": "microsoft",
+      "model_type": "phi3",
       "hf_repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
       "hf_filename": "Phi-3-mini-4k-instruct-q4.gguf"
     }
   },
   "dataset": {
+    "publisher": "SurAyush",
     "name": "SurAyush/News_Summary_Dataset",
     "split": "train[:1000]"
   },
@@ -23,9 +30,9 @@
     "top_p": 0.9
   },
   "llama_cpp_params": {
-    "n_gpu_layers": -1,
+    "n_gpu_layers": 30,
     "n_ctx": 4096,
-    "verbose": false
+    "verbose": true
   },
   "flow_params": {
     "max_iters": 3,
