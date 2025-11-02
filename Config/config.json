@@ -1,12 +1,12 @@
 {
   "paths": {
     "prompt_reason": "Prompt/EN-Reasoning.txt",
-    "prompt_critic": "Prompt/EN-Critical-Lite.txt"
+    "prompt_critic": "Prompt/EN-Critical-High.txt"
   },
   "models": {
     "reasoning_model": {
-      "hf_repo_id": "Qwen/Qwen1.5-1.8B-Chat-GGUF",
-      "hf_filename": "qwen1_5-1_8b-chat-q4_k_m.gguf"
+      "hf_repo_id": "TheBloke/phi-2-GGUF",
+      "hf_filename": "phi-2.Q4_K_M.gguf"
     },
     "critical_model": {
       "hf_repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
