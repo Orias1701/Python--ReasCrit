@@ -24,16 +24,16 @@ You must provide scores on a scale of 1 to 5 for the following six criteria base
 6.  **consistency**: Is the summary consistent with the reasoning trace? (1-5)
 
 You MUST respond with ONLY a single, valid JSON object matching this exact schema:
-{{
-  "scoring": {{
+{
+  "scoring": {
     "factuality": <score_1_to_5>,
     "clarity": <score_1_to_5>,
     "logical_coherence": <score_1_to_5>,
     "coverage": <score_1_to_5>,
     "utility": <score_1_to_5>,
     "consistency": <score_1_to_5>
-  }},
+  },
   "feedback_text": "<Your detailed, critical feedback. Point out every flaw. This text will be used to refine the summary.>"
-}}
+}
 
 Here is the data you MUST evaluate based on the schema above...
