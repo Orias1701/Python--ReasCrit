@@ -1,77 +1,148 @@
 # Libraries/Flow_Reasoning.py
-from typing import Dict, Any, Optional
+import json
 import re
+from typing import Any, Dict, Optional
+from . import Flow_Base
 
-_ALLOWED_CHARS = r"a-zA-Z0-9\.\,\:\;\(\)\-\?\!\s"
+_WORD_RE = re.compile(r"\b\w+\b")
 
-_MD_BOLD = re.compile(r"\*\*(.*?)\*\*")
-_BULLET = re.compile(r"^[\-\*\+]\s*", flags=re.M)
-_CTRL = re.compile(r"[\u200B-\u200D\uFEFF]")
-_NOT_ALLOWED = re.compile(fr"[^{_ALLOWED_CHARS}]", flags=re.UNICODE)
+def _word_count(s: str) -> int:
+    return len(_WORD_RE.findall(s or ""))
 
-def sanitize_reasoning(text: str) -> str:
+
+class ReasoningFlow(Flow_Base.FlowBase):
     """
-    Loại bỏ markdown và ký tự có thể gây nhiễu grammar critic.
-    Không đổi nội dung ngữ nghĩa, chỉ dọn định dạng.
+    Reasoning + Refinement engine.
+    - Round 1: generate reasoning + summary
+    - Round >1: refine reasoning + summary using critic feedback
+    - Always return strict JSON (string)
+    - With degrade-safe fallback
     """
-    if not isinstance(text, str):
-        return text
 
-    s = text
-    s = _MD_BOLD.sub(r"\1", s)
-    s = _BULLET.sub("", s) 
-    s = _CTRL.sub("", s)
-    s = s.replace("—", "-").replace("–", "-")
-    s = _NOT_ALLOWED.sub("", s)
-    s = re.sub(r"[ \t]{2,}", " ", s)
-    s = re.sub(r"\n{3,}", "\n\n", s)
-    return s.strip()
+    def _parse_best_json(self, raw: str) -> Dict[str, Any]:
+        """
+        Try JSON.parse → brace-extract → sanitize quotes → fallback empty
+        """
+        try:
+            return self.parse_first_json(raw)
+        except:
+            try:
+                txt = self.extract_first_json(raw)
+            except:
+                txt = raw
 
-def clean(text):
-    if not isinstance(text, str): return text
-    text = text.replace("—","-").replace("–","-")
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    text = re.sub(r"[ \t]{2,}", " ", text)
-    return text.strip()
+            # Try repairing: single quotes → double quotes
+            txt = re.sub(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)\s*:',
+                         lambda m: m.group(1) + f'"{m.group(2)}":', txt)
+            txt = re.sub(r":\s*'([^']*)'",
+                         lambda m: ':"{}"'.format(m.group(1).replace('"', '\\"')),
+                         txt)
+            txt = re.sub(r",\s*'([^']*)'",
+                         lambda m: ',"{}"'.format(m.group(1).replace('"', '\\"')),
+                         txt)
+            txt = re.sub(r",\s*([}\]])", r"\1", txt)
 
-def run(client, reason_prompt, refine_prompt, generation_params, current_reasoning, text, feedback=None):
+            try:
+                return json.loads(txt)
+            except:
+                return {
+                    "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
+                    "summary": ""
+                }
 
-    if client is None:
-        return None
+    def _sanitize_feedback_text(self, fb: Optional[str]) -> str:
+        if not fb:
+            return ""
+        s = fb.strip()
+        # remove trailing "Written by ..."
+        s = re.sub(r"(Written by.*)$", "", s).strip()
+        return s
 
-    if feedback:
-        content = (
-            f"{refine_prompt}\n"
-            "[PREVIOUS OUTPUT]\n"
-            f"{current_reasoning}\n\n"
-            "[FEEDBACK]\n"
-            f"{feedback}\n\n"
-            "[ORIGINAL DOCUMENT]\n"
-            f"{text}\n"
-        )
+    def _ensure_fields(self, obj: Dict[str, Any]):
+        if "reasoning" not in obj or not isinstance(obj["reasoning"], dict):
+            obj["reasoning"] = {"topic": "", "key_ideas": "", "filtered_ideas": ""}
+        for k in ["topic", "key_ideas", "filtered_ideas"]:
+            if k not in obj["reasoning"]:
+                obj["reasoning"][k] = ""
 
-    else:
-        content = (
-            f"{reason_prompt}\n"
-            "[ORIGINAL DOCUMENT]\n"
-            f"{text}\n"
-        )
+        if "summary" not in obj or not isinstance(obj["summary"], str):
+            obj["summary"] = ""
 
-    prompt = f"<|user|>\n{content}\n<|end|>\n<|assistant|>"
+        return obj
 
-    try:
-        out = client(
-            prompt,
-            max_tokens=generation_params.get("max_new_tokens", 512),
-            temperature=generation_params.get("temperature", 0.2),
-            top_p=generation_params.get("top_p", 0.9),
-            stop=["<|end|>", "<|assistant|>"]
-        )["choices"][0].get("text","")
+    def _safe_prev(self, prev_text: Optional[str]) -> Dict[str, Any]:
+        if not prev_text:
+            return {
+                "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
+                "summary": ""
+            }
+        try:
+            obj = self.parse_first_json(prev_text)
+            self._ensure_fields(obj)
+            return obj
+        except:
+            return {
+                "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
+                "summary": ""
+            }
 
-        out = clean(out)
-        out = sanitize_reasoning(out)
-        return out
+    def run_reason_or_refine(
+        self,
+        reason_prompt: str,
+        refine_prompt: str,
+        current_reasoning: Optional[str],
+        source_text: str,
+        feedback: Optional[str] = None
+    ) -> Dict[str, Any]:
 
-    except Exception as e:
-        print(f"❌ Reason error: {e}")
-        raise SystemExit(1)
+        fb_clean = self._sanitize_feedback_text(feedback)
+
+        if fb_clean:
+            prompt = (
+                f"{refine_prompt}"
+                f"\n\n[PREVIOUS OUTPUT]\n\n"
+                f"{current_reasoning}"
+                "\n\n[FEEDBACK]\n\n"
+                f"{fb_clean}"
+                "\n\n[ORIGINAL DOCUMENT]\n\n"
+                f"{source_text}"
+            ).strip()
+        else:
+            prompt = (
+                f"{reason_prompt}"
+                "\n\n[ORIGINAL DOCUMENT]\n\n"
+                f"{source_text}"
+            ).strip()
+
+        raw = self.call_llm(f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>")
+        obj = self._parse_best_json(raw)
+        obj = self._ensure_fields(obj)
+
+        # refine: allow changes but prevent degradation
+        if fb_clean:
+            prev = self._safe_prev(current_reasoning)
+            if not obj["summary"].strip():
+                obj["summary"] = prev["summary"]
+            if not obj["reasoning"]["topic"]:
+                obj["reasoning"] = prev["reasoning"]
+
+        # Ensure ≤100 words
+        if _word_count(obj["summary"]) > 100:
+            words = _WORD_RE.findall(obj["summary"])
+            obj["summary"] = " ".join(words[:100])
+
+        return obj
+
+
+# ---------------- BACKWARD COMPAT API ----------------
+def run(client, reason_prompt, refine_prompt, generation_params, source_text, current_reasoning, feedback=None):
+    rf = ReasoningFlow(client, request_kwargs={
+        "max_tokens": generation_params.get("max_new_tokens", 768),
+        "temperature": generation_params.get("temperature", 0.2),
+        "top_p": generation_params.get("top_p", 0.9),
+    })
+
+    result = rf.run_reason_or_refine(reason_prompt, refine_prompt, current_reasoning, source_text, feedback)
+
+    # ✅ Always return JSON string (fix pipeline contract)
+    return json.dumps(result, ensure_ascii=False)

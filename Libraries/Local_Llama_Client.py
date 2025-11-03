@@ -13,22 +13,26 @@ from typing import Optional, List, Any, Dict
 class LocalLlamaClient:
     def __init__(self, 
                  host: str = "http://localhost:8080", 
-                 timeout: int = 270,  # Timeout cho request (dài)
+                 timeout: int = 270,
                  retry: int = 3, 
-                 wait_timeout: int = 300): # Timeout cho việc chờ server (5 phút)
+                 wait_timeout: int = 300):
         
         self.host = host.rstrip("/")
         self.timeout = timeout 
-        self.health_timeout = 5 # Timeout cho health check (ngắn)
+        self.health_timeout = 5
         self.retry = retry
-        
-        # Ngay khi client được tạo, nó sẽ chờ cho đến khi server sẵn sàng.
-        self.wait_for_server_ready(wait_timeout) 
 
+        # chọn endpoint mặc định, có thể cập nhật sau health-check
+        self._completion_endpoint = "/completion"    # llama.cpp server
+        self._alt_endpoints = ["/v1/completions", "/v1/chat/completions"]
+
+        self.wait_for_server_ready(wait_timeout)
+        
     def wait_for_server_ready(self, wait_timeout: int):
         """
         Hỏi thăm (poll) endpoint /health cho đến khi server "ready"
         hoặc hết thời gian chờ (wait_timeout).
+        Chấp nhận {"status":"ok"} hoặc {"ready":true} hoặc HTTP 200 với text "ok".
         """
         start_time = time.time()
         url = f"{self.host}/health"
@@ -43,50 +47,70 @@ class LocalLlamaClient:
 
             try:
                 res = requests.get(url, timeout=self.health_timeout)
-                data = res.json()
-                status = data.get("status")
+                ok = False
+                try:
+                    data = res.json()
+                    status = str(data.get("status", "")).lower()
+                    ready = bool(data.get("ready", False))
+                    if status == "ok" or ready:
+                        ok = True
+                except json.JSONDecodeError:
+                    if res.status_code == 200 and "ok" in res.text.lower():
+                        ok = True
 
-                # --- SỬA LỖI Ở ĐÂY ---
-                # Server 'llama.cpp' trả về "ok" khi sẵn sàng, không phải "ready".
-                if status == "ok":
-                # ---------------------
-                    print(f"✅ Server đã tải model và sẵn sàng (status: {status}).")
-                    break # Thoát khỏi vòng lặp, server đã sẵn sàng
+                if ok:
+                    print(f"✅ Server đã sẵn sàng.")
+                    break
                 else:
-                    # Bất kỳ status nào khác: "loading", "busy", None, v.v.
-                    print(f"⏳ Server đang bận (status: {status}). Thử lại sau 5s...")
+                    print(f"⏳ Server chưa sẵn sàng (HTTP {res.status_code}). Thử lại sau 5s...")
 
             except requests.exceptions.ConnectionError:
-                # Server (Docker) chưa kịp chạy
                 print(f"⏳ Đang chờ kết nối đến server tại {self.host}... Thử lại sau 5s...")
             
-            except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
-                # Các lỗi request khác (như timeout, 404, or invalid JSON)
+            except requests.exceptions.RequestException as e:
                 print(f"⚠️ Lỗi health check: {e}. Thử lại sau 5s...")
 
-            time.sleep(5) # Chờ 5 giây trước khi hỏi thăm lại
-
-    # ... (Phần còn lại của file _post và __call__ giữ nguyên như cũ) ...
+            time.sleep(5)
 
     def _post(self, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Gửi yêu cầu POST và xử lý retry."""
-        url = f"{self.host}{endpoint}"
+        """Gửi yêu cầu POST và xử lý retry + fallback endpoint."""
+        tried = [endpoint] + [ep for ep in self._alt_endpoints if ep != endpoint]
 
-        for attempt in range(self.retry):
-            try:
-                res = requests.post(url, json=payload, timeout=self.timeout) 
+        for ep in tried:
+            url = f"{self.host}{ep}"
+            for attempt in range(self.retry):
+                try:
+                    res = requests.post(url, json=payload, timeout=self.timeout) 
 
-                if res.status_code == 200:
-                    return res.json()
+                    if res.status_code == 200:
+                        try:
+                            return res.json()
+                        except json.JSONDecodeError:
+                            return {"error": f"INVALID_JSON_RESPONSE at {ep}"}
 
-                print(f"[LLAMA API WARNING] HTTP {res.status_code}: {res.text}")
-                time.sleep(1)
+                    print(f"[LLAMA API WARNING] HTTP {res.status_code} at {ep}: {res.text}")
+                    # Nếu 404, thử endpoint khác ngay
+                    if res.status_code == 404:
+                        break
+                    time.sleep(1)
 
-            except requests.exceptions.RequestException as e:
-                print(f"[LLAMA API ERROR] {str(e)}")
-                time.sleep(1)
+                except requests.exceptions.RequestException as e:
+                    print(f"[LLAMA API ERROR] {str(e)} (endpoint {ep})")
+                    time.sleep(1)
 
         return {"error": "LLAMA_REQUEST_FAILED"}
+
+    def reset(self):
+        """Reset model session / KV cache trên llama.cpp (nếu hỗ trợ)."""
+        url = f"{self.host}/reset"
+        try:
+            res = requests.post(url, timeout=10)
+            if res.status_code == 200:
+                print("🧹 Phiên đã reset (KV cache cleared)")
+            else:
+                print(f"⚠️ Reset lỗi: HTTP {res.status_code} → {res.text}")
+        except Exception as e:
+            print(f"❌ Không reset được Llama server: {e}")
 
     def __call__(self,
                  prompt: str,
@@ -113,15 +137,25 @@ class LocalLlamaClient:
         elif grammar:
             payload["grammar"] = grammar
             
-        data = self._post("/completion", payload)
+        data = self._post(self._completion_endpoint, payload)
 
         if "error" in data:
             return {"choices": [{"text": f"[LLAMA_ERROR] {data['error']}"}]}
         
+        # Chuẩn hóa theo schema llama.cpp server
+        content = data.get("content", "")
+        if not content and isinstance(data.get("choices"), list):
+            # openai-like
+            try:
+                content = data["choices"][0]["message"]["content"]
+            except Exception:
+                try:
+                    content = data["choices"][0].get("text","")
+                except Exception:
+                    content = ""
+
         return {
             "choices": [
-                {
-                    "text": data.get("content", "")
-                }
+                {"text": content}
             ]
         }

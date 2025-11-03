@@ -8,7 +8,6 @@ from typing import Dict, Any
 def json_parse(text: str) -> Dict[str, Any]:
     """
     Parse một chuỗi JSON sạch.
-    (Đã xóa logic regex/đếm ngoặc vì Grammar đảm bảo JSON sạch)
     """
     text = text.strip()
     try:

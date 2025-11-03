@@ -1,105 +1,90 @@
 # Libraries/Flow_Critical.py
 from typing import Dict, Any
-from Libraries import Common_Helpers as helpers
-import re, sys
+import json, re
+from . import Flow_Base
+from . import Json_Parser
 
-from Libraries.exceptions import PipelineAbortSample
+_REQUIRED_SCORES = ["factuality","clarity","logical_coherence","coverage","utility","consistency"]
+parser = Json_Parser
 
-def clean_reasoning_block(text: str) -> str:
-    if not isinstance(text, str): return ""
-    text = re.sub(r"[\u0000-\u001F\u007F-\u009F]", "", text)
-    text = re.sub(r"[^\w\s\.,;:\-\(\)!?/'\"]", "", text)
-    text = re.sub(r" +", " ", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
+class CriticalFlow(Flow_Base.FlowBase):
 
-def extract_all_json(text: str):
-    blocks = []
-    start = None
-    depth = 0
-    for i, ch in enumerate(text):
-        if ch == "{":
-            if depth == 0: start = i
-            depth += 1
-        elif ch == "}":
-            depth -= 1
-            if depth == 0 and start is not None:
-                blocks.append(text[start:i+1])
-                start = None
-    return blocks
+    def run_critic(
+        self,
+        critic_prompt: str,
+        refine_prompt: str,
+        source_text: str,
+        reasoning_output: str,
+        prev_result: Dict[str,Any] = None
+    ) -> Dict[str, Any]:
 
-def try_parse_json_blocks(raw: str):
-    """Try parse all JSON blocks, return last valid."""
-    blocks = extract_all_json(raw)
-    valid = None
-    for block in blocks:
+        clean_reason = reasoning_output or ""
+
         try:
-            valid = helpers.json_parse(block)
+            obj = self.parse_first_json(clean_reason)
+            current_summary = obj.get("summary","")
         except:
-            continue
-    return valid
+            current_summary = ""
 
-def fail_exit(msg, raw=None):
-    print(f"\n❌ SAMPLE SKIPPED — {msg}")
-    if raw:
-        print("\n--- RAW OUTPUT ---\n", raw)
-    raise PipelineAbortSample(msg)
+        prev_scores = prev_result.get("scoring") if prev_result else {}
+        prev_feedback = prev_result.get("feedback_text","") if prev_result else ""
 
-def run(client: Any, critic_prompt: str, source_text: str, reasoning_output: str) -> Dict[str, Any]:
+        sys_prompt = refine_prompt if prev_result else critic_prompt
+        feedback_part = (f"\n\n[PREVIOUS_SCORE]\n{json.dumps(prev_scores)}"
+                        f"\n\n[PREVIOUS_FEEDBACK]\n{prev_feedback}") if prev_result else ""
+        prompt = (
+            f"{sys_prompt}"
+            f"{feedback_part}"
+            f"\n\n[REASONING_JSON]\n{clean_reason}"
+            f"\n\n[CURRENT_SUMMARY]\n{current_summary}"
+            f"\n\n[ORIGINAL]\n{source_text}"
+        ).strip()
 
-    if client is None: fail_exit("CRITIC_CLIENT missing")
-    clean_reason = clean_reasoning_block(reasoning_output or "")
+        if not current_summary.strip():
+            return {
+                "scoring": {k:1 for k in _REQUIRED_SCORES},
+                "feedback_text": "Summary missing."
+            }
 
-    prompt = f"""
-{critic_prompt}
+        raw = self.call_llm(f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>")
+        parsed = parser.sanitize_and_parse_critic(raw)
 
-[REASONING]
-{clean_reason}
+        if parsed is None:
+            return {
+                "error":"JSON_PARSE_FAIL",
+                "raw_response": raw,
+                "scoring":{k:2 for k in _REQUIRED_SCORES},
+                "feedback_text":"Parser fallback: include one numeric/date detail and rewrite concisely."
+            }
 
-[ORIGINAL]
-{source_text}
-""".strip()
+        result = self._repair_schema(parsed)
+        return result
 
-    full_prompt = f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>"
+    def _repair_schema(self, obj: Dict[str,Any]) -> Dict[str,Any]:
+        out = {"scoring":{}, "feedback_text":""}
 
-    # -------- First Attempt --------
-    try:
-        res = client(
-            full_prompt,
-            max_tokens=800,
-            temperature=0,
-            top_p=1.0,
-            json_mode=True
-        )
-    except Exception as e:
-        fail_exit(f"Runtime LLM error: {e}")
+        scoring = obj.get("scoring",{})
+        if not isinstance(scoring,dict):
+            scoring = {}
 
-    raw = (res["choices"][0].get("text","") or "").strip()
-    parsed = try_parse_json_blocks(raw)
+        for k in _REQUIRED_SCORES:
+            v = scoring.get(k)
+            scoring[k] = v if isinstance(v,(int,float)) else 1
+        out["scoring"] = scoring
 
-    if parsed is not None:
-        return parsed
-
-    # If we reach here → model gave broken JSON. Retry forcing JSON ONLY.
-    print("⚠️ Retrying JSON extraction once...")
-
-    retry_prompt = f"<|user|>\nReturn ONLY JSON valid:\n{prompt}\n<|end|>\n<|assistant|>"
-
-    try:
-        res2 = client(
-            retry_prompt,
-            max_tokens=800,
-            temperature=0,
-            top_p=1.0,
-            json_mode=True
-        )
-        raw2 = (res2["choices"][0].get("text","") or "").strip()
-        parsed2 = try_parse_json_blocks(raw2)
-
-        if parsed2 is not None:
-            return parsed2
+        fb = obj.get("feedback_text","").strip()
+        if not fb:
+            fb = "Provide one missing quantitative detail and one actionable rewrite instruction."
         else:
-            fail_exit(...)
+            fb = re.sub(r"You are .*", "", fb, flags=re.I)
+        out["feedback_text"] = fb.strip()
 
-    except Exception as e:
-        fail_exit(f"Retry LLM error: {e}", raw)
+        return out
+
+
+def run(client, critic_prompt, refine_prompt, generation_params, source_text, reasoning_output, prev_result=None):
+
+    cf = CriticalFlow(client, request_kwargs={
+        "max_tokens":1536, "temperature":0, "top_p":1.0
+    })
+    return cf.run_critic(critic_prompt, refine_prompt, source_text, reasoning_output, prev_result)

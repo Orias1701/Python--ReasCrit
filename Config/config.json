@@ -1,8 +1,9 @@
 {
   "paths": {
-    "prompt_reason": "Prompt/EN-Reason-First.txt",
-    "prompt_refine": "Prompt/EN-Reason-Refine.txt",
-    "prompt_critic": "Prompt/EN-Critical-High.txt",
+    "prompt_reason_first": "Prompt/EN-Reason-First.txt",
+    "prompt_reason_refine": "Prompt/EN-Reason-Refine.txt",
+    "prompt_critic_first": "Prompt/EN-Critical-First.txt",
+    "prompt_critic_refine": "Prompt/EN-Critical-Refine.txt",
     "local_model_dir": "Models"
   },
   "models": {
@@ -25,17 +26,17 @@
     "split": "train[:1000]"
   },
   "generation_params": {
-    "max_new_tokens": 512,
+    "max_new_tokens": 1024,
     "temperature": 0.3,
     "top_p": 0.9
   },
   "llama_cpp_params": {
-    "n_gpu_layers": 30,
+    "n_gpu_layers": -1,
     "n_ctx": 4096,
     "verbose": true
   },
   "flow_params": {
     "max_iters": 3,
-    "min_improve": 0.05
+    "min_improve": 0.1
   }
 }
