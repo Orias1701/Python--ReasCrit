@@ -11,18 +11,8 @@ def _word_count(s: str) -> int:
 
 
 class ReasoningFlow(Flow_Base.FlowBase):
-    """
-    Reasoning + Refinement engine.
-    - Round 1: generate reasoning + summary
-    - Round >1: refine reasoning + summary using critic feedback
-    - Always return strict JSON (string)
-    - With degrade-safe fallback
-    """
 
     def _parse_best_json(self, raw: str) -> Dict[str, Any]:
-        """
-        Try JSON.parse → brace-extract → sanitize quotes → fallback empty
-        """
         try:
             return self.parse_first_json(raw)
         except:
@@ -94,23 +84,21 @@ class ReasoningFlow(Flow_Base.FlowBase):
     ) -> Dict[str, Any]:
 
         fb_clean = self._sanitize_feedback_text(feedback)
-
-        if fb_clean:
-            prompt = (
-                f"{refine_prompt}"
-                f"\n\n[PREVIOUS OUTPUT]\n\n"
-                f"{current_reasoning}"
-                "\n\n[FEEDBACK]\n\n"
-                f"{fb_clean}"
-                "\n\n[ORIGINAL DOCUMENT]\n\n"
-                f"{source_text}"
-            ).strip()
-        else:
-            prompt = (
-                f"{reason_prompt}"
-                "\n\n[ORIGINAL DOCUMENT]\n\n"
-                f"{source_text}"
-            ).strip()
+        
+        system_prompt = refine_prompt if fb_clean else reason_prompt
+        sub_prompt = (
+            f"\n\nTóm tắt trước đó:\n\n"
+            f"{current_reasoning}"
+            "\n\nPhản hồi:\n\n"
+            f"{fb_clean}"
+        ).strip() if fb_clean else ""
+        
+        prompt = (
+            f"{system_prompt}"
+            f"{sub_prompt}"
+            "\n\nVăn bản gốc:\n\n"
+            f"{source_text}"
+        ).strip()
 
         raw = self.call_llm(f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>")
         obj = self._parse_best_json(raw)

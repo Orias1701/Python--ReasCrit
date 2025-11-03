@@ -51,14 +51,14 @@ class CriticalFlow(Flow_Base.FlowBase):
         prev_feedback = prev_result.get("feedback_text","") if prev_result else ""
 
         sys_prompt = refine_prompt if prev_result else critic_prompt
-        feedback_part = (f"\n\n[PREVIOUS_SCORE]\n{json.dumps(prev_scores)}"
-                        f"\n\n[PREVIOUS_FEEDBACK]\n{prev_feedback}") if prev_result else ""
+        feedback_part = (f"\n\Điểm trước đó:\n{json.dumps(prev_scores)}"
+                        f"\n\Phản hồi trước đó:\n{prev_feedback}") if prev_result else ""
         prompt = (
             f"{sys_prompt}"
             f"{feedback_part}"
-            f"\n\n[REASONING_JSON]\n{clean_reason}"
-            f"\n\n[CURRENT_SUMMARY]\n{current_summary}"
-            f"\n\n[ORIGINAL]\n{source_text}"
+            f"\n\nJson suy luận:\n{clean_reason}"
+            f"\n\nBản tóm tắt:\n{current_summary}"
+            f"\n\nVăn bản gốc:\n{source_text}"
         ).strip()
 
         if not current_summary.strip():
