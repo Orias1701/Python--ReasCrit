@@ -14,7 +14,9 @@ SUMMARIZER
 └── ModelLoader.py
 ```
 
-## ✅ GPU LLM Setup (Windows + WSL2 + Docker + CUDA + Llama.cpp)
+## conda create -f cuda.yml
+
+## GPU LLM Setup (Windows + WSL2 + Docker + CUDA + Llama.cpp)
 
 ### 1) Cài WSL2 - Ubuntu - Docker
 
