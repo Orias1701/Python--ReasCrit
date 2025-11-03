@@ -1,9 +1,17 @@
+import json
 import os, subprocess, time, sys
 from pathlib import Path
 
+BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
+
+CONFIG = BASE/"Config"/"config.json"
+with open(CONFIG, "r", encoding="utf-8") as f:
+    cfg = json.load(f)
+
+
 # CONFIG ======================================================
-MODEL_DIR = r"E:\_DevResources\4. Python\Docs\Python--ReasCrit\Models\microsoft\phi3"
-MODEL_FILE = "Phi-3-mini-4k-instruct-q4.gguf"
+MODEL_DIR = f"{BASE}/{cfg['paths']['local_model_dir']}/{cfg['models']['reasoning_model']['publisher']}/{cfg['models']['reasoning_model']['model_type']}"
+MODEL_FILE = cfg['models']['reasoning_model']['hf_filename']
 PORT = "8080"
 CONTAINER_NAME = "local-llama-gpu"
 IMAGE = "ghcr.io/ggerganov/llama.cpp:server-cuda"

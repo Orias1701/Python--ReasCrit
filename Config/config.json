@@ -12,16 +12,16 @@
   },
   "models": {
     "reasoning_model": {
-      "publisher": "janhq",
-      "model_type": "Vistral-7B-Chat-GGUF",
-      "hf_repo_id": "janhq/Vistral-7B-Chat-GGUF",
-      "hf_filename": "vitral-7b-chat.Q3_K_M.gguf"
+      "publisher": "Qwen",
+      "model_type": "Qwen2.5-3B-Instruct-GGUF",
+      "hf_repo_id": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "hf_filename": "qwen2.5-3b-instruct-q5_k_m.gguf"
     },
     "critical_model": {
-      "publisher": "janhq",
-      "model_type": "Vistral-7B-Chat-GGUF",
-      "hf_repo_id": "janhq/Vistral-7B-Chat-GGUF",
-      "hf_filename": "vitral-7b-chat.Q3_K_M.gguf"
+      "publisher": "Qwen",
+      "model_type": "Qwen2.5-3B-Instruct-GGUF",
+      "hf_repo_id": "Qwen/Qwen2.5-3B-Instruct-GGUF",
+      "hf_filename": "qwen2.5-3b-instruct-q5_k_m.gguf"
     }
   },
   "dataset-EN": {
@@ -34,10 +34,17 @@
     "name": "LongK171/VNexpress",
     "split": "train[:1000]"
   },
-  "generation_params": {
-    "max_new_tokens": 1024,
+  "reason_params": {
+    "max_new_tokens": 512,
     "temperature": 0.3,
-    "top_p": 0.9
+    "top_p": 0.9,
+    "seed": 42
+  },
+  "critic_params": {
+    "max_new_tokens": 512,
+    "temperature": 0.1,
+    "top_p": 0.8,
+    "seed": 314159
   },
   "llama_cpp_params": {
     "n_gpu_layers": -1,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import re
 import json
 
@@ -13,15 +12,15 @@ KEY_SIG = {
     "feedback_text": "feedback"
 }
 
-# Map text → number
 NUM_MAP = {
+    "một":1,"hai":2,"ba":3,"bốn":4,"năm":5,
     "one":1,"two":2,"three":3,"four":4,"five":5,
     "1":1,"2":2,"3":3,"4":4,"5":5
 }
 
 
 # -------------------------------------------------
-# 1) Check subsequence key match (f-e-e-d-b-a-c-k theo thứ tự)
+# 1) Check subsequence key match
 # -------------------------------------------------
 def is_subsequence(pattern, text):
     it = iter(text.lower())
@@ -45,16 +44,13 @@ def normalize_key(k):
 def normalize_value(v):
     v = v.strip().lower().replace('"','').replace("'", "")
 
-    # text number
     if v in NUM_MAP: 
         return NUM_MAP[v]
 
-    # digit 1-5
     m = re.match(r"^([1-5])$", v)
     if m:
         return int(m.group(1))
 
-    # không hợp lệ
     return None
 
 
@@ -75,7 +71,6 @@ def extract_json_like(text):
             if stack == 0 and start is not None:
                 return text[start:i+1]
 
-    # fallback: vùng có scoring
     pos = text.lower().find("scoring")
     if pos != -1:
         tail = text[pos:]
@@ -88,13 +83,8 @@ def extract_json_like(text):
 # 5) Rút gọn ký tự rác, chuẩn hóa dấu cách
 # -------------------------------------------------
 def collapse_symbols(s):
-    # collapse ngoặc/dấu lại còn 1 cái
     s = re.sub(r'([{}[\]:,])\1+', r'\1', s)
-
-    # bỏ ký tự rác giữ chỉ số, chữ, {}[]:,. và khoảng trắng
-    s = re.sub(r'[^0-9A-Za-z{}[\]:,.\s"]', ' ', s)
-
-    # collapse space
+    s = re.sub(r'[^0-9A-Za-zÀ-ỿà-ỹ{}[\]:,.\s"]', ' ', s)
     s = re.sub(r'\s+', ' ', s)
     return s.strip()
 
@@ -103,7 +93,7 @@ def collapse_symbols(s):
 # 6) Cắt feedback theo trigger rác
 # -------------------------------------------------
 def cut_feedback(text):
-    stops = ["you are", "chatgpt", "assistant", "model", "```"]
+    stops = ["\n\n", "```"]
     lower = text.lower()
     cut = len(text)
 
@@ -121,23 +111,16 @@ def cut_feedback(text):
 # 7) Hàm chính: sanitize & parse
 # -------------------------------------------------
 def sanitize_and_parse_critic(raw):
-    # bước 1: lấy vùng nghi là JSON
-    chunk = extract_json_like(raw)
-    # print(f"Extracted chunk: {chunk}\n\n")
     
-    # bước 2: chuẩn hóa ký tự rác
+    chunk = extract_json_like(raw)
     chunk = collapse_symbols(chunk)
-    # print(f"Collapsed chunk: {chunk}\n\n")
 
-    # ✅ Try extract feedback fast, but DO NOT return yet
     m_fb = re.search(r'"feedback[_\s]*text"\s*:\s*"([^"]+)"', chunk, re.IGNORECASE)
     fast_feedback = m_fb.group(1) if m_fb else None
     if fast_feedback:
         fast_feedback = cut_feedback(fast_feedback)
 
-    # bước 3: tách token
     tokens = re.split(r'([{,}])', chunk)
-    # print(f"Tokens: {tokens}\n\n")
     
     scoring = {}
     feedback = ""
@@ -149,7 +132,6 @@ def sanitize_and_parse_critic(raw):
         if not tk:
             continue
 
-        # trường hợp: key:value chung dòng
         if ":" in tk:
             parts = tk.split(":",1)
             k = parts[0].strip().replace('"','').replace("'", "")
@@ -159,11 +141,9 @@ def sanitize_and_parse_critic(raw):
             if nk:
                 current_key = nk
 
-                # ✅ Nếu là feedback_text → cố lấy toàn bộ chuỗi "..."
                 if nk == "feedback_text":
                     in_feedback = True
 
-                    # nếu value bắt đầu bằng quote → cố lấy full string giữa "..."
                     if v.startswith('"'):
                         m = re.search(r'"([^"]+)"', chunk)
                         if m:
@@ -172,11 +152,9 @@ def sanitize_and_parse_critic(raw):
                             current_key = None
                             continue
                         else:
-                            # nếu chưa đóng quote trong token này → thu thập tiếp
                             feedback += " " + v.lstrip('"')
                             continue
 
-                # ✅ Nếu là số và không phải feedback
                 nv = normalize_value(v)
                 if nk != "feedback_text" and nv is not None:
                     scoring[nk] = nv
@@ -185,34 +163,22 @@ def sanitize_and_parse_critic(raw):
 
                 continue
 
-
-        # thu thập feedback
         if in_feedback:
-            # bỏ ngoặc nhưng giữ text
             if tk not in "{}[]":
-                # loại dấu , đơn lẻ nhưng giữ dấu phẩy trong câu
                 if tk != ",":
                     feedback += " " + tk
             continue
 
-
-        # xử lý value cách dòng
         if current_key and current_key != "feedback_text":
             nv = normalize_value(tk)
             if nv is not None:
                 scoring[current_key] = nv
                 current_key = None
 
-    # print(f"Scoring dict: {scoring}\n")
-    # print(f"Raw feedback: {feedback}\n\n")
-    
-    # finalize feedback
     feedback = cut_feedback(feedback.strip())
     if not feedback and fast_feedback:
         feedback = fast_feedback
 
-
-    # fill thiếu score = 3
     out = {"scoring":{}, "feedback_text":feedback}
     for k in KEY_SIG:
         if k == "feedback_text": 

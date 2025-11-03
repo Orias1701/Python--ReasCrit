@@ -9,6 +9,27 @@ parser = Json_Parser
 
 class CriticalFlow(Flow_Base.FlowBase):
 
+    def _repair_schema(self, obj: Dict[str,Any]) -> Dict[str,Any]:
+        out = {"scoring":{}, "feedback_text":""}
+
+        scoring = obj.get("scoring",{})
+        if not isinstance(scoring,dict):
+            scoring = {}
+
+        for k in _REQUIRED_SCORES:
+            v = scoring.get(k)
+            scoring[k] = v if isinstance(v,(int,float)) else 1
+        out["scoring"] = scoring
+
+        fb = obj.get("feedback_text","").strip()
+        if not fb:
+            fb = "Provide one missing quantitative detail and one actionable rewrite instruction."
+        else:
+            fb = re.sub(r"You are .*", "", fb, flags=re.I)
+        out["feedback_text"] = fb.strip()
+
+        return out
+    
     def run_critic(
         self,
         critic_prompt: str,
@@ -60,31 +81,13 @@ class CriticalFlow(Flow_Base.FlowBase):
         result = self._repair_schema(parsed)
         return result
 
-    def _repair_schema(self, obj: Dict[str,Any]) -> Dict[str,Any]:
-        out = {"scoring":{}, "feedback_text":""}
-
-        scoring = obj.get("scoring",{})
-        if not isinstance(scoring,dict):
-            scoring = {}
-
-        for k in _REQUIRED_SCORES:
-            v = scoring.get(k)
-            scoring[k] = v if isinstance(v,(int,float)) else 1
-        out["scoring"] = scoring
-
-        fb = obj.get("feedback_text","").strip()
-        if not fb:
-            fb = "Provide one missing quantitative detail and one actionable rewrite instruction."
-        else:
-            fb = re.sub(r"You are .*", "", fb, flags=re.I)
-        out["feedback_text"] = fb.strip()
-
-        return out
-
-
 def run(client, critic_prompt, refine_prompt, generation_params, source_text, reasoning_output, prev_result=None):
 
     cf = CriticalFlow(client, request_kwargs={
-        "max_tokens":1536, "temperature":0, "top_p":1.0
+        "max_tokens":generation_params['max_new_tokens'],
+        "temperature":generation_params['temperature'],
+        "top_p":generation_params['top_p'],
+        # "seed":generation_params['seed']
     })
+
     return cf.run_critic(critic_prompt, refine_prompt, source_text, reasoning_output, prev_result)

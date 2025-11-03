@@ -31,7 +31,6 @@ class ReasoningFlow(Flow_Base.FlowBase):
             except:
                 txt = raw
 
-            # Try repairing: single quotes → double quotes
             txt = re.sub(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)\s*:',
                          lambda m: m.group(1) + f'"{m.group(2)}":', txt)
             txt = re.sub(r":\s*'([^']*)'",
@@ -54,7 +53,6 @@ class ReasoningFlow(Flow_Base.FlowBase):
         if not fb:
             return ""
         s = fb.strip()
-        # remove trailing "Written by ..."
         s = re.sub(r"(Written by.*)$", "", s).strip()
         return s
 
@@ -137,12 +135,11 @@ class ReasoningFlow(Flow_Base.FlowBase):
 # ---------------- BACKWARD COMPAT API ----------------
 def run(client, reason_prompt, refine_prompt, generation_params, source_text, current_reasoning, feedback=None):
     rf = ReasoningFlow(client, request_kwargs={
-        "max_tokens": generation_params.get("max_new_tokens", 768),
-        "temperature": generation_params.get("temperature", 0.2),
-        "top_p": generation_params.get("top_p", 0.9),
+        "max_tokens":generation_params['max_new_tokens'],
+        "temperature":generation_params['temperature'],
+        "top_p":generation_params['top_p'],
+        # "seed":generation_params['seed']
     })
 
     result = rf.run_reason_or_refine(reason_prompt, refine_prompt, current_reasoning, source_text, feedback)
-
-    # ✅ Always return JSON string (fix pipeline contract)
     return json.dumps(result, ensure_ascii=False)
