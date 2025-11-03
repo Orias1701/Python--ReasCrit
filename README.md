@@ -50,10 +50,9 @@ sudo apt update && sudo apt upgrade -y
 
 ### 5) Cài NVIDIA Container Toolkit (trong Ubuntu)
 
-<pre class="overflow-visible!" data-start="743" data-end="915"><div class="contain-inline-size rounded-2xl relative bg-token-sidebar-surface-primary"><div class="sticky top-9"><div class="absolute end-0 bottom-0 flex h-9 items-center pe-2"><div class="bg-token-bg-elevated-secondary text-token-text-secondary flex items-center gap-4 rounded-sm px-2 font-sans text-xs"></div></div></div><div class="overflow-y-auto p-4" dir="ltr"><code class="whitespace-pre! language-bash"><span><span>sudo apt-get install -y nvidia-container-toolkit
+sudo apt-get install -y nvidia-container-toolkit
 sudo nvidia-ctk runtime configure --runtime=docker
 sudo systemctl restart docker || sudo service docker restart
-</span></span></code></div></div></pre>
 
 ---
 

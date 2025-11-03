@@ -1,6 +1,7 @@
 import json
 import os, subprocess, time, sys
 from pathlib import Path
+from huggingface_hub import hf_hub_download
 
 BASE = Path(getattr(sys, "_MEIPASS", Path(__file__).parent))
 
@@ -8,23 +9,41 @@ CONFIG = BASE/"Config"/"config.json"
 with open(CONFIG, "r", encoding="utf-8") as f:
     cfg = json.load(f)
 
-
 # CONFIG ======================================================
-MODEL_DIR = f"{BASE}/{cfg['paths']['local_model_dir']}/{cfg['models']['reasoning_model']['publisher']}/{cfg['models']['reasoning_model']['model_type']}"
-MODEL_FILE = cfg['models']['reasoning_model']['hf_filename']
+model_dir = cfg['paths']['local_model_dir']
+publisher = cfg['models']['reasoning_model']['publisher']
+model_type = cfg['models']['reasoning_model']['model_type']
+hf_repo_id = cfg['models']['reasoning_model']['hf_repo_id']
+hf_filename = cfg['models']['reasoning_model']['hf_filename']
+
+MODEL_DIR = Path(BASE/model_dir/publisher/model_type)
+MODEL_FILE = hf_filename
 PORT = "8080"
 CONTAINER_NAME = "local-llama-gpu"
 IMAGE = "ghcr.io/ggerganov/llama.cpp:server-cuda"
 # ============================================================
 
-# Resolve model path
-model_path = Path(MODEL_DIR) / MODEL_FILE
+# Ensure model directory exists
+MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
+model_path = MODEL_DIR / MODEL_FILE
+
+# Auto-download if missing
 if not model_path.exists():
-    print(f"❌ Model not found: {model_path}")
-    sys.exit(1)
-
-print(f"✅ Model found: {model_path}")
+    print(f"❗ Model not found locally, downloading from HuggingFace: {hf_repo_id}")
+    try:
+        downloaded = hf_hub_download(
+            repo_id=hf_repo_id,
+            filename=hf_filename,
+            local_dir=MODEL_DIR,
+            local_dir_use_symlinks=False
+        )
+        print(f"✅ Downloaded model to: {downloaded}")
+    except Exception as e:
+        print(f"❌ Failed to download model: {e}")
+        sys.exit(1)
+else:
+    print(f"✅ Model found: {model_path}")
 
 # Ensure Docker Desktop is running
 def is_docker_running():
@@ -43,7 +62,6 @@ def start_docker_desktop():
     subprocess.Popen(f'"{docker_path}"')
     time.sleep(5)
 
-# Start Docker if needed
 if not is_docker_running():
     start_docker_desktop()
     while not is_docker_running():
@@ -52,19 +70,17 @@ if not is_docker_running():
 
 print("✅ Docker is ready")
 
-# Kill previous container if exists
 print("🛑 Removing previous container (if any)")
 os.system(f"docker rm -f {CONTAINER_NAME} >nul 2>&1")
 
-# Start llama server
 cmd = f'docker run --gpus all --name {CONTAINER_NAME} -p {PORT}:8080 -v "{MODEL_DIR}:/models" {IMAGE} --model /models/{MODEL_FILE} --ctx-size 4096'
 
 print("🚀 Starting Llama server...")
 print(cmd)
 
 subprocess.Popen(cmd, shell=True)
-
 time.sleep(3)
+
 print(f"""
 ✅ Llama server started!
 URL: http://localhost:{PORT}
