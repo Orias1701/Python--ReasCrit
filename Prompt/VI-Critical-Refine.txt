@@ -60,7 +60,7 @@ Quy trình bắt buộc:
     "utility": <1-5>,
     "consistency": <1-5>
   },
-  "feedback_text": "<phản hồi bằng những ý ngắn gọn sau khi kiểm chứng đúng>"
+  "feedback_text": "<phản hồi một câu ngắn gọn dưới 30 từ gợi ý những chỗ cần chỉnh sửa>"
 }
 
 Ràng buộc bổ sung:
