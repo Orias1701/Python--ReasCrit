@@ -73,17 +73,12 @@ print("✅ Docker is ready")
 print("🛑 Removing previous container (if any)")
 os.system(f"docker rm -f {CONTAINER_NAME} >nul 2>&1")
 
-cmd = f'''
-docker run --gpus all --name {CONTAINER_NAME} -p {PORT}:8080 ^
-  -e GGML_CUDA=1 ^
-  -e GGML_CUDA_FORCE_MMQ=1 ^
-  -e GGML_CUDA_SCRATCH_SIZE_MB=4096 ^
-  -v "{MODEL_DIR}:/models" {IMAGE} ^
-  --model /models/{MODEL_FILE} ^
-  --n-gpu-layers 999 ^
-  --ctx-size 4096 ^
-  --use-cuda
-'''
+cmd = (
+    f'docker run --gpus all --name {CONTAINER_NAME} -p {PORT}:8080 '
+    f'-e GGML_CUDA=1 -e GGML_CUDA_FORCE_MMQ=1 -e GGML_CUDA_SCRATCH_SIZE_MB=4096 '
+    f'-v "{MODEL_DIR}:/models" {IMAGE} '
+    f'--model /models/{MODEL_FILE} --n-gpu-layers 999 --ctx-size 4096'
+)
 
 print("🚀 Starting Llama server...")
 print(cmd)
