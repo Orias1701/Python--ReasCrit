@@ -16,18 +16,63 @@ def json_parse(text: str) -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         raise ValueError(f"❌ Không parse được JSON (lỗi cú pháp): {e}\n{text}")
 
+WEIGHTS = {
+    "factuality": 0.30,
+    "coverage": 0.20,
+    "logical_coherence": 0.15,
+    "clarity": 0.15,
+    "consistency": 0.10,
+    "utility": 0.10
+}
+
 def average_score(critical_output: Dict[str, Any]) -> float:
     """
-    Tính điểm trung bình từ output JSON của critical model.
+    Tính điểm trung bình. Ưu tiên công thức trọng số.
+    Nếu thiếu dữ liệu hoặc không parse được -> fallback sang mean().
     """
-    scoring_dict = critical_output.get("scoring")
-    if not scoring_dict or not isinstance(scoring_dict, dict):
+    scoring = critical_output.get("scoring")
+
+    if not scoring or not isinstance(scoring, dict):
         if "error" not in critical_output:
-             print("⚠️ Lỗi: Không tìm thấy key 'scoring' trong output của Critical.")
+            print("⚠️ Lỗi: output không có 'scoring'. Trả về 0.0")
         return 0.0
-    
-    scores = [
-        float(s) for s in scoring_dict.values() 
-        if isinstance(s, (int, float, str)) and str(s).replace('.','',1).isdigit()
-    ]
-    return mean(scores) if scores else 0.0
+
+    # --- 1) thử tính theo trọng số ---
+    try:
+        weighted_sum = 0.0
+        valid = True
+
+        for metric, weight in WEIGHTS.items():
+            if metric not in scoring:
+                valid = False
+                break
+            val = scoring[metric]
+
+            # convert -> float
+            try:
+                val = float(val)
+            except:
+                valid = False
+                break
+
+            weighted_sum += val * weight
+
+        if valid:
+            return round(weighted_sum, 4)
+
+    except Exception as e:
+        print(f"⚠️ Lỗi khi tính theo trọng số: {e}")
+
+    # --- 2) fallback: dùng mean() như cách cũ ---
+    fallback_values = []
+    for v in scoring.values():
+        try:
+            fallback_values.append(float(v))
+        except:
+            continue
+
+    if fallback_values:
+        return round(mean(fallback_values), 4)
+
+    print("⚠️ Không lấy được số hợp lệ từ scoring. Trả về 0.0")
+    return 0.0
