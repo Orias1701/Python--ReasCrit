@@ -11,30 +11,39 @@ def _word_count(s: str) -> int:
 
 
 class ReasoningFlow(Flow_Base.FlowBase):
+    """
+    Phiên bản robust — parse thủ công hoàn toàn (không dùng parse_first_json).
+    """
 
     def _parse_best_json(self, raw: str) -> Dict[str, Any]:
+        """
+        Dò JSON thủ công, khôi phục và load an toàn, cho phép JSON chỉ có 'summary'.
+        """
+        if not raw or not isinstance(raw, str):
+            return {"reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""}, "summary": ""}
+
+        text = raw.strip()
+        text = re.sub(r"[\u0000-\u001F]+", " ", text)
+        text = text.replace("’", "'").replace("“", '"').replace("”", '"')
+        text = text.replace("\\'", "'").replace('\\"', '"')
+
+        match = re.search(r"\{.*\}", text, re.DOTALL)
+        if match:
+            text = match.group(0)
+
+        text = re.sub(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)\s*:',
+                      lambda m: m.group(1) + f'"{m.group(2)}":', text)
+
+        text = re.sub(r":\s*'([^']*)'", lambda m: ':"{}"'.format(m.group(1).replace('"', '\\"')), text)
+        text = re.sub(r"'\s*,", lambda m: '",', text)
+        text = re.sub(r",\s*([}\]])", r"\1", text)
+
         try:
-            obj = self.parse_first_json(raw)
-        except:
-            try:
-                txt = self.extract_first_json(raw)
-            except:
-                txt = raw
-
-            txt = re.sub(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)\s*:',
-                        lambda m: m.group(1) + f'"{m.group(2)}":', txt)
-            txt = re.sub(r":\s*'([^']*)'",
-                        lambda m: ':"{}"'.format(m.group(1).replace('"', '\\"')),
-                        txt)
-            txt = re.sub(r",\s*'([^']*)'",
-                        lambda m: ',"{}"'.format(m.group(1).replace('"', '\\"')),
-                        txt)
-            txt = re.sub(r",\s*([}\]])", r"\1", txt)
-
-            try:
-                obj = json.loads(txt)
-            except:
-                obj = {}
+            obj = json.loads(text)
+        except Exception:
+            summary_match = re.search(r'"summary"\s*:\s*"([^"]+)"', text)
+            summary = summary_match.group(1).strip() if summary_match else ""
+            obj = {"reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""}, "summary": summary}
 
         if isinstance(obj, dict) and "summary" in obj and "reasoning" not in obj:
             obj["reasoning"] = {"topic": "", "key_ideas": "", "filtered_ideas": ""}
@@ -62,19 +71,13 @@ class ReasoningFlow(Flow_Base.FlowBase):
 
     def _safe_prev(self, prev_text: Optional[str]) -> Dict[str, Any]:
         if not prev_text:
-            return {
-                "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
-                "summary": ""
-            }
+            return {"reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""}, "summary": ""}
         try:
-            obj = self.parse_first_json(prev_text)
+            obj = json.loads(prev_text)
             self._ensure_fields(obj)
             return obj
         except:
-            return {
-                "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
-                "summary": ""
-            }
+            return {"reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""}, "summary": ""}
 
     def run_reason_or_refine(
         self,
@@ -86,49 +89,29 @@ class ReasoningFlow(Flow_Base.FlowBase):
     ) -> Dict[str, Any]:
 
         fb_clean = self._sanitize_feedback_text(feedback)
-        
         system_prompt = refine_prompt if fb_clean else reason_prompt
         sub_prompt = (
-            f"\n\nTóm tắt trước đó:\n\n"
-            f"{current_reasoning}"
-            "\n\nPhản hồi:\n\n"
-            f"{fb_clean}"
+            f"\n\nTóm tắt trước đó:\n\n{current_reasoning}"
+            f"\n\nPhản hồi:\n\n{fb_clean}"
         ).strip() if fb_clean else ""
         
-        prompt = (
-            f"{system_prompt}"
-            f"{sub_prompt}"
-            "\n\nVăn bản gốc:\n\n"
-            f"{source_text}"
-        ).strip()
+        prompt = f"{system_prompt}{sub_prompt}\n\nVăn bản gốc:\n\n{source_text}".strip()
 
-        # ======================================================
-        # ✅ Thêm cơ chế thử lại tối đa 3 lần nếu parse lỗi
-        # ======================================================
+        # 🔁 Gọi LLM và parse thủ công — retry tối đa 3 lần
         attempt = 0
         obj = None
         while attempt < 3:
             attempt += 1
             raw = self.call_llm(f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>")
             obj = self._parse_best_json(raw)
-
-            # Nếu có summary hợp lệ thì dừng retry
             if isinstance(obj, dict) and obj.get("summary", "").strip():
                 break
-            else:
-                print(f"⚠️ Parse lỗi hoặc summary trống → thử lại lần {attempt}")
+            print(f"⚠️ Lần {attempt}: parse thất bại, thử lại...")
 
-        # Nếu sau 3 lần vẫn lỗi → trả về mặc định
         if not obj or not obj.get("summary", "").strip():
-            print("❌ Quá 3 lần thử → dùng giá trị mặc định.")
-            obj = {
-                "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
-                "summary": ""
-            }
+            print("❌ Quá 3 lần vẫn lỗi → dùng mặc định.")
+            obj = {"reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""}, "summary": ""}
 
-        # ======================================================
-        # refine: tránh thoái hóa nội dung
-        # ======================================================
         if fb_clean:
             prev = self._safe_prev(current_reasoning)
             if not obj["summary"].strip():
@@ -136,7 +119,6 @@ class ReasoningFlow(Flow_Base.FlowBase):
             if not obj["reasoning"]["topic"]:
                 obj["reasoning"] = prev["reasoning"]
 
-        # Đảm bảo summary ≤100 từ
         if _word_count(obj["summary"]) > 100:
             words = _WORD_RE.findall(obj["summary"])
             obj["summary"] = " ".join(words[:100])
@@ -147,11 +129,9 @@ class ReasoningFlow(Flow_Base.FlowBase):
 # ---------------- BACKWARD COMPAT API ----------------
 def run(client, reason_prompt, refine_prompt, generation_params, source_text, current_reasoning, feedback=None):
     rf = ReasoningFlow(client, request_kwargs={
-        "max_tokens":generation_params['max_new_tokens'],
-        "temperature":generation_params['temperature'],
-        "top_p":generation_params['top_p'],
-        # "seed":generation_params['seed']
+        "max_tokens": generation_params['max_new_tokens'],
+        "temperature": generation_params['temperature'],
+        "top_p": generation_params['top_p'],
     })
-
     result = rf.run_reason_or_refine(reason_prompt, refine_prompt, current_reasoning, source_text, feedback)
     return json.dumps(result, ensure_ascii=False)
