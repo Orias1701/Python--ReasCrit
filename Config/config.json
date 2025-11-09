@@ -26,6 +26,20 @@
       "hf_filename": "qwen2.5-3b-instruct-q5_k_m.gguf"
     }
   },
+  "models_2": {
+    "reasoning_model": {
+      "publisher": "microsoft",
+      "model_type": "phi3",
+      "hf_repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
+      "hf_filename": "Phi-3-mini-4k-instruct-q4.gguf"
+    },
+    "critical_model": {
+      "publisher": "microsoft",
+      "model_type": "phi3",
+      "hf_repo_id": "microsoft/Phi-3-mini-4k-instruct-gguf",
+      "hf_filename": "Phi-3-mini-4k-instruct-q4.gguf"
+    }
+  },
   "dataset-en": {
     "publisher": "SurAyush",
     "name": "SurAyush/News_Summary_Dataset",

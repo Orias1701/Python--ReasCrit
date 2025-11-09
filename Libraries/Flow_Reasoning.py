@@ -102,11 +102,33 @@ class ReasoningFlow(Flow_Base.FlowBase):
             f"{source_text}"
         ).strip()
 
-        raw = self.call_llm(f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>")
-        obj = self._parse_best_json(raw)
-        obj = self._ensure_fields(obj)
+        # ======================================================
+        # ✅ Thêm cơ chế thử lại tối đa 3 lần nếu parse lỗi
+        # ======================================================
+        attempt = 0
+        obj = None
+        while attempt < 3:
+            attempt += 1
+            raw = self.call_llm(f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>")
+            obj = self._parse_best_json(raw)
 
-        # refine: allow changes but prevent degradation
+            # Nếu có summary hợp lệ thì dừng retry
+            if isinstance(obj, dict) and obj.get("summary", "").strip():
+                break
+            else:
+                print(f"⚠️ Parse lỗi hoặc summary trống → thử lại lần {attempt}")
+
+        # Nếu sau 3 lần vẫn lỗi → trả về mặc định
+        if not obj or not obj.get("summary", "").strip():
+            print("❌ Quá 3 lần thử → dùng giá trị mặc định.")
+            obj = {
+                "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
+                "summary": ""
+            }
+
+        # ======================================================
+        # refine: tránh thoái hóa nội dung
+        # ======================================================
         if fb_clean:
             prev = self._safe_prev(current_reasoning)
             if not obj["summary"].strip():
@@ -114,7 +136,7 @@ class ReasoningFlow(Flow_Base.FlowBase):
             if not obj["reasoning"]["topic"]:
                 obj["reasoning"] = prev["reasoning"]
 
-        # Ensure ≤100 words
+        # Đảm bảo summary ≤100 từ
         if _word_count(obj["summary"]) > 100:
             words = _WORD_RE.findall(obj["summary"])
             obj["summary"] = " ".join(words[:100])
