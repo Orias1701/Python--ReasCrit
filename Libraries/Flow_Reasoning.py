@@ -14,7 +14,7 @@ class ReasoningFlow(Flow_Base.FlowBase):
 
     def _parse_best_json(self, raw: str) -> Dict[str, Any]:
         try:
-            return self.parse_first_json(raw)
+            obj = self.parse_first_json(raw)
         except:
             try:
                 txt = self.extract_first_json(raw)
@@ -22,22 +22,24 @@ class ReasoningFlow(Flow_Base.FlowBase):
                 txt = raw
 
             txt = re.sub(r'([{,]\s*)([A-Za-z_][A-Za-z0-9_\-]*)\s*:',
-                         lambda m: m.group(1) + f'"{m.group(2)}":', txt)
+                        lambda m: m.group(1) + f'"{m.group(2)}":', txt)
             txt = re.sub(r":\s*'([^']*)'",
-                         lambda m: ':"{}"'.format(m.group(1).replace('"', '\\"')),
-                         txt)
+                        lambda m: ':"{}"'.format(m.group(1).replace('"', '\\"')),
+                        txt)
             txt = re.sub(r",\s*'([^']*)'",
-                         lambda m: ',"{}"'.format(m.group(1).replace('"', '\\"')),
-                         txt)
+                        lambda m: ',"{}"'.format(m.group(1).replace('"', '\\"')),
+                        txt)
             txt = re.sub(r",\s*([}\]])", r"\1", txt)
 
             try:
-                return json.loads(txt)
+                obj = json.loads(txt)
             except:
-                return {
-                    "reasoning": {"topic": "", "key_ideas": "", "filtered_ideas": ""},
-                    "summary": ""
-                }
+                obj = {}
+
+        if isinstance(obj, dict) and "summary" in obj and "reasoning" not in obj:
+            obj["reasoning"] = {"topic": "", "key_ideas": "", "filtered_ideas": ""}
+
+        return self._ensure_fields(obj)
 
     def _sanitize_feedback_text(self, fb: Optional[str]) -> str:
         if not fb:
