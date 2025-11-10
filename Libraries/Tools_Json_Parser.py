@@ -1,13 +1,15 @@
+# Libraries/A0_Json_Parser.py
+
 import re
-import json
 import random
+
+# ==============================
 
 def score_dict(_REQUIRED_SCORES) -> dict:
     return {
         k: random.choices([3, 4, 5], weights=[40, 40, 20])[0]
         for k in _REQUIRED_SCORES
     }
-
 
 # Các key chuẩn
 KEY_SIG = {

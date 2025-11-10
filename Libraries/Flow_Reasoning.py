@@ -1,8 +1,14 @@
 # Libraries/Flow_Reasoning.py
+
 import json
 import re
-from typing import Any, Dict, Optional
+
+from typing import Optional, Dict, Any
+
+from . import Tools_Json_Parser
 from . import Flow_Base
+
+# ==============================
 
 _WORD_RE = re.compile(r"\b\w+\b")
 
@@ -97,7 +103,6 @@ class ReasoningFlow(Flow_Base.FlowBase):
         
         prompt = f"{system_prompt}{sub_prompt}\n\nVăn bản gốc:\n\n{source_text}".strip()
 
-        # 🔁 Gọi LLM và parse thủ công — retry tối đa 3 lần
         attempt = 0
         obj = None
         while attempt < 3:

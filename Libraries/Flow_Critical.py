@@ -1,11 +1,16 @@
 # Libraries/Flow_Critical.py
+
+import json
+import re
+
 from typing import Dict, Any
-import json, re
+
+from . import Tools_Json_Parser 
 from . import Flow_Base
-from . import Json_Parser
+
+# ==============================
 
 _REQUIRED_SCORES = ["factuality","clarity","logical_coherence","coverage","utility","consistency"]
-parser = Json_Parser
 
 class CriticalFlow(Flow_Base.FlowBase):
 
@@ -63,17 +68,12 @@ class CriticalFlow(Flow_Base.FlowBase):
 
         if not current_summary.strip():
             return {
-                "scoring": parser.score_dict(_REQUIRED_SCORES),
+                "scoring": Tools_Json_Parser.score_dict(_REQUIRED_SCORES),
                 "feedback_text": "Summary missing."
             }
-        else:
-            return {
-                "scoring": parser.score_dict(_REQUIRED_SCORES),
-                "feedback_text": "Summary missing."
-            }            
 
         raw = self.call_llm(f"<|user|>\n{prompt}\n<|end|>\n<|assistant|>")
-        parsed = parser.sanitize_and_parse_critic(raw)
+        parsed = Tools_Json_Parser.sanitize_and_parse_critic(raw)
 
         if parsed is None:
             return {

@@ -1,15 +1,15 @@
 {
   "paths": {
-    "prompt_reason_no-en": "Prompt/EN-Reason-No.txt",
-    "prompt_reason_no-vi": "Prompt/VI-Reason-No.txt",
-    "prompt_reason_first-en": "Prompt/EN-Reason-First.txt",
-    "prompt_reason_refine-en": "Prompt/EN-Reason-Refine.txt",
-    "prompt_critic_first-en": "Prompt/EN-Critic-First.txt",
-    "prompt_critic_refine-en": "Prompt/EN-Critic-Refine.txt",
-    "prompt_reason_first-vi": "Prompt/VI-Reason-First.txt",
-    "prompt_reason_refine-vi": "Prompt/VI-Reason-Refine.txt",
-    "prompt_critic_first-vi": "Prompt/VI-Critic-First.txt",
-    "prompt_critic_refine-vi": "Prompt/VI-Critic-Refine.txt",
+    "prompt_reason_no-en": "Prompts/EN-Reason-No.txt",
+    "prompt_reason_no-vi": "Prompts/VI-Reason-No.txt",
+    "prompt_reason_first-en": "Prompts/EN-Reason-First.txt",
+    "prompt_critic_first-en": "Prompts/EN-Critic-First.txt",
+    "prompt_reason_first-vi": "Prompts/VI-Reason-First.txt",
+    "prompt_critic_first-vi": "Prompts/VI-Critic-First.txt",
+    "prompt_reason_refine-en": "Prompts/EN-Reason-Refine.txt",
+    "prompt_critic_refine-en": "Prompts/EN-Critic-Refine.txt",
+    "prompt_reason_refine-vi": "Prompts/VI-Reason-Refine.txt",
+    "prompt_critic_refine-vi": "Prompts/VI-Critic-Refine.txt",
     "local_model_dir": "Models"
   },
   "models": {
@@ -26,7 +26,7 @@
       "hf_filename": "qwen2.5-3b-instruct-q5_k_m.gguf"
     }
   },
-  "models_2": {
+  "models_Deleted": {
     "reasoning_model": {
       "publisher": "microsoft",
       "model_type": "phi3",

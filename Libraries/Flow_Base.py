@@ -1,3 +1,13 @@
+# Libraries/Flow_Base.py
+
+import json
+import re
+import time
+
+from typing import Callable, Dict, Any, List
+
+# ==============================
+
 # Flow_Base.py
 # Shared utilities for Reasoning / Critic flows.
 # - Robust LLM call with retries
@@ -5,19 +15,12 @@
 # - Minimal JSON validation hooks
 # - Sanitization
 # - Word-count helper
-import json
-import re
-import time
-from typing import Optional, Dict, Any, List, Callable, Tuple
-
 
 class FlowError(Exception):
     pass
 
-
 class JSONParseError(FlowError):
     pass
-
 
 class FlowBase:
     """

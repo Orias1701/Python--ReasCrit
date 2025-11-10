@@ -1,14 +1,11 @@
-"""
-Local Llama HTTP Client Wrapper
+# Libraries/Client_Llama.py
 
-Sử dụng để giao tiếp với Llama.cpp server qua REST API.
-Không phụ thuộc llama_cpp package nội bộ.
-"""
-
-import requests
-import time
 import json
-from typing import Optional, List, Any, Dict
+import time
+import requests
+from typing import Optional, Dict, Any, List
+
+# ==============================
 
 class LocalLlamaClient:
     def __init__(self, 

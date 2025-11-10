@@ -3,44 +3,46 @@
 ## Project Structure
 
 ```
-SUMMARIZER
-│
-├── Assets/
-│ ├── ex.exceptions.json
-│ ├── ex.markers.json
-│ └── ex.status.json
+ROOT
 │
 ├── Config/
-└── ModelLoader.py
+│    ├── config.json
+│    └── keys.json
+│
+├── Data/
+│    ├── LongK171
+│    │    └── VNexpress
+│    └── SurAyush
+│         └── News_Summary_Dataset
+│
+├── Libraries/
+│    ├── __init__.py
+│    ├── Client_Llama.py
+│    ├── Common_*.py
+│    ├── Flow_*.py
+│    ├── Processor_*.py
+│    └── Tools_Json_Parser.py
+│
+├── Models/
+│    ├── microsoft
+│    │    └── Phi-3-mini-4k-instruct-gguf
+│    └── Qwen
+│         └── Qwen2.5-3B-Instruct-GGUF
+│
+├── Output/
+│    ├── Histories-Batch-EN.json
+│    └── Histories-Batch-VI.json
+│
+├── Prompts/
+│    ├── EN-*.txt
+│    └── VI-*.txt
+│
+├── Reports/
+│
+├── .gitignore
+├── env.yml
+├── llama_run.py
+├── Main_Pipeline.ipynb├── Reports/
+└── README.md
+END
 ```
-
-## conda create -f cuda.yml
-
-## GPU LLM Setup (Windows + WSL2 + Docker + CUDA + Llama.cpp)
-
-### 1) Cài WSL2 - Ubuntu - Docker
-
-```
-wsl --install
-wsl --set-default-version 2
-wsl --update
-wsl --install -d Ubuntu
-wsl --set-default Ubuntu
-
-$installer = "DockerDesktopInstaller.exe"
-Invoke-WebRequest -UseBasicParsing "https://desktop.docker.com/win/main/amd64/Docker%20Desktop%20Installer.exe" -OutFile $installer
-
-Start-Process -FilePath $installer -ArgumentList "install --quiet" -Wait
-& "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-
-docker --version
-docker-compose version
-
-sudo apt update && sudo apt upgrade -y
-```
-
----
-
-
-
-### 2) Chạy llama_run.py
