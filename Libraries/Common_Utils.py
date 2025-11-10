@@ -61,67 +61,6 @@ def insert_json(data: Any, path: Path, indent: int = 2):
             data_list = []
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data_list, f, indent=indent, ensure_ascii=False)
-
-def _get_sort_key(key_str: str) -> int:
-    """
-    Hàm nội bộ: Lấy phần số từ key (ví dụ: 'index_10' -> 10)
-    để sắp xếp.
-    """
-    try:
-        # Tách "index_10" thành ["index", "10"] và lấy phần tử cuối
-        num_str = key_str.split('_')[-1]
-        return int(num_str)
-    except (ValueError, IndexError):
-        # Nếu key không phải dạng 'index_X' (ví dụ: "config_info")
-        # Trả về -1 để đẩy nó lên đầu file
-        return -1
-
-def update_json_dict(key: str, data: Any, path: Path, indent: int = 2):
-    """
-    Cập nhật file JSON (định dạng Dictionary) tại một key cụ thể.
-    Đọc file, thêm/ghi đè key, SẮP XẾP lại, và ghi đè toàn bộ.
-    """
-    
-    # 1. Đảm bảo thư mục tồn tại
-    dir_path = path.parent
-    if dir_path:
-        os.makedirs(dir_path, exist_ok=True)
-
-    history_dict: Dict[str, Any] = {}
-
-    # 2. Đọc file JSON hiện có
-    if path.exists() and path.stat().st_size > 0:
-        try:
-            with open(path, 'r', encoding='utf-8') as f:
-                history_dict = json.load(f)
-            
-            if not isinstance(history_dict, dict):
-                print(f"⚠️ Cảnh báo: {path} không chứa Dictionary. Sẽ ghi đè.")
-                history_dict = {}
-        
-        except json.JSONDecodeError:
-            history_dict = {}
-    
-    # 3. Thêm (hoặc cập nhật) dữ liệu mới
-    # (Điều này đáp ứng: "Nếu key đã tồn tại, overwrite nó")
-    history_dict[key] = data
-
-    # 4. SẮP XẾP lại Dictionary dựa trên key số
-    # (Điều này đáp ứng: "chèn vào cấu trúc... đã sắp xếp")
-    try:
-        sorted_keys = sorted(history_dict.keys(), key=_get_sort_key)
-        sorted_dict = {k: history_dict[k] for k in sorted_keys}
-    except Exception as e:
-        print(f"⚠️ Cảnh báo: Không thể sắp xếp JSON keys: {e}. Sẽ ghi không sắp xếp.")
-        sorted_dict = history_dict # Ghi không sắp xếp nếu lỗi
-
-    # 5. Ghi đè (overwrite 'w') toàn bộ file bằng dict đã cập nhật
-    try:
-        with open(path, 'w', encoding='utf-8') as f:
-            json.dump(sorted_dict, f, indent=indent, ensure_ascii=False)
-    except Exception as e:
-        print(f"❌ Lỗi khi ghi {path}: {e}")
-        
         
 # ===============================
 # 2. JSONL
